@@ -5,23 +5,24 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import json
 import datetime
-import csv
 
 # Configuration
-USERNAME = "hmu.user.four"
-PASSWORD = "7pHmWTfvYg9TuSy"
-ADMIN_EMAIL = "admin@example.com"
-RECIPIENTS = {
-    "country_id_1": ["email1@example.com", "email2@example.com"],
-    "country_id_2": ["email3@example.com", "email4@example.com"],
-    # ... add more countries and their recipients
-}
+username = "hmu.user.four"
+password = "7pHmWTfvYg9TuSy"
+
+token = ""
+countries_dict = { }
+region_dict = {}
+countries_insecure_dict = {}
+countries_insecure_now_dict = {}
 
 def get_token():
     url = "https://api.hungermapdata.org/swe-notifications/token"
-    response = requests.post(url, auth=(USERNAME, PASSWORD))
-    return response.json()["token"]
-
+    response = requests.post(url, auth=(username, password))
+    global token
+    token = response.json()["token"]
+    
+#Point to Note-Token Expires in 3 seconds
 def call_api(url, token):
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(url, headers=headers)
@@ -31,61 +32,113 @@ def get_population_dataframe():
     url = "https://api.hungermapdata.org/swe-notifications/population.csv"
     return pd.read_csv(url)
 
-def calculate_food_insecurity_percent(region_id, days_ago, token):
-    url = f"https://api.hungermapdata.org/swe-notifications/foodsecurity?region_id={region_id}&days_ago={days_ago}"
-    food_insecurity_data = call_api(url, token)
-    return food_insecurity_data["food_insecure"] / food_insecurity_data["population"]
+def get_food_insecure(days_ago):
+    get_token()
+    url = f"https://api.hungermapdata.org/swe-notifications/foodsecurity?days_ago={days_ago}"
+    response = call_api(url, token)
+    if "error" in response:
+        print("Token expired. Retrying")
+        get_token()
+        response = call_api(url, token)
+    return response
 
-def get_country_from_region(region_id, token):
+def get_country_from_region(region_id):
     url = f"https://api.hungermapdata.org/swe-notifications/region/{region_id}/country"
-    return call_api(url, token)
+    response = call_api(url, token)
+    if "error" in response:
+        print("Token expired. Retrying")
+        get_token()
+        response = call_api(url, token)
+    return response
 
-def get_regions_from_country(country_id, token):
+def get_regions_from_country(country_id):
     url = f"https://api.hungermapdata.org/swe-notifications/country/{country_id}/regions"
-    return call_api(url, token)
+    response = call_api(url, token)
+    if "error" in response:
+        print("Token expired. Retrying")
+        get_token()
+        response = call_api(url, token)
+    return response
 
-def send_email(country_id, subject, body):
-    recipients = RECIPIENTS[country_id] + [ADMIN_EMAIL]
+def send_email(country):
+    # Simulates sending an email
+    print(f"Food insecurity in {country['name']} has increased by 5% or more in the past 30 days.")
 
-    msg = MIMEMultipart()
-    msg["From"] = "noreply@fake.smtp.wfp.org"
-    msg["To"] = ", ".join(recipients)
-    msg["Subject"] = subject
+def get_countries_population_from_region(csv_data):
+    print("Generating population")
+    global countries_dict
+    global region_dict
+   
+    
+    for index, row in csv_data.iterrows():
+        region = row['region_id']
+        population = row['population']
+        if region == 341:
+    
+            response = get_country_from_region(region)
 
-    msg.attach(MIMEText(body, "plain"))
+            print(response)
+            country = response['country_id']
+            saved_population = countries_dict.get(country, 0) 
+            countries_dict.update({country:  saved_population + population}) 
 
-    server = smtplib.SMTP("fake.smtp.wfp.org", 587)
-    server.starttls()
-    # Replace USERNAME and PASSWORD with SMTP credentials
-    server.login(USERNAME, PASSWORD)
-    text = msg.as_string()
-    server.sendmail("noreply@fake.smtp.wfp.org", recipients, text)
-    server.quit()
+            region_dict.update({region: country})
+    
+    print("Country - Population ", countries_dict)
+    print("Region - Country", region_dict)
+
+    # Get food insecure data - 30 days
+    global countries_insecure_dict
+    insecure_response = get_food_insecure(30)
+
+    for res in insecure_response:
+        insecure_region = res['region_id']
+        insecure_country = region_dict.get(insecure_region, 0)
+
+        if insecure_country != 0:
+            insecure_population = res['food_insecure_people']
+            saved_insecure_population = countries_insecure_dict.get(insecure_country, 0) 
+
+            countries_insecure_dict.update({insecure_country: saved_insecure_population + insecure_population})
+
+    print("Country - Insecure", countries_insecure_dict)
+
+    # Get food insecure data - Now
+    global countries_insecure_now_dict
+    insecure_response = get_food_insecure(0)
+
+    for res in insecure_response:
+        insecure_region = res['region_id']
+        insecure_country = region_dict.get(insecure_region, 0)
+
+        if insecure_country != 0:
+            insecure_population = res['food_insecure_people']
+            saved_insecure_population = countries_insecure_now_dict.get(insecure_country, 0) 
+
+            countries_insecure_now_dict.update({insecure_country: saved_insecure_population + insecure_population})
+
+    print("Country - Insecure NOW", countries_insecure_now_dict)
+
 
 def main():
     print("Running---")
-    token = get_token()
-    print("Token-->",token)
+    get_token()
     population_df = get_population_dataframe()
-    print("population_df-->",population_df)
+   
+    get_countries_population_from_region(population_df)
 
-    for country_id in RECIPIENTS.keys():
-        print("country_id", country_id)
-        regions = get_regions_from_country(country_id, token)
-        print("regions", regions)
+    global countries_dict
+    for country in countries_dict:
+        country_population = countries_dict.get(country, 0)
+        insecure_population_30 = countries_insecure_dict.get(country, 0)
+        insecure_population_now = countries_insecure_now_dict.get(country, 0)
 
-        for region in regions:
-            region_id = region["id"]
-            population = population_df.loc[population_df["region_id"] == region_id, "population"].item()
+        past_percent = (insecure_population_30 / country_population) * 100.00
+        print("Past percent", past_percent)
+        current_percent = (insecure_population_now / country_population) * 100.00
 
-            current_percent = calculate_food_insecurity_percent(region_id, 0, token)
-            past_percent = calculate_food_insecurity_percent(region_id, 30, token)
-
-            if current_percent >= past_percent + 0.05:
-                country = get_country_from_region(region_id, token)
-                subject = f"Food security alert for {country['name']}"
-                body = f"Food insecurity in {country['name']} has increased by 5% or more in the past 30 days."
-                send_email(country_id, subject, body)
+        if current_percent >= past_percent + 0.05:
+            send_email(country)
 
 if __name__ == "__main__":
     main()

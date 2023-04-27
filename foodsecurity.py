@@ -26,7 +26,8 @@ def get_food_security_data(region, days_ago, bearer_token):
 
 def calculate_food_insecurity_percentage(country_data, population_data):
     total_population = sum([int(population_data[region]) for region in population_data])
-    total_food_insecure = sum([region_data['food_insecure'] for region_data in country_data])
+    print("total population", total_population)
+    total_food_insecure = sum([region_data['food_insecure_people'] for region_data in country_data])
     return (total_food_insecure / total_population) * 100
 
 def read_population_data():
@@ -51,11 +52,13 @@ def main():
     bearer_token = get_bearer_token()
     population_data = read_population_data()
     for country in ['Country A', 'Country B', 'Country C']:
-        country_data = get_food_security_data(country, 30, bearer_token)
-        print("Country Data =====> ", country_data)
-        current_percentage = calculate_food_insecurity_percentage(country_data, population_data)
+        current_country_data = get_food_security_data(country, 30, bearer_token)
+        previous_country_data = get_food_security_data(country, 0, bearer_token)
+
+        #print("Country Data =====> ", country_data)
+        current_percentage = calculate_food_insecurity_percentage(current_country_data, population_data)
         print("Current Percentage =====> ", current_percentage) 
-        previous_percentage = calculate_food_insecurity_percentage(country_data, population_data)
+        previous_percentage = calculate_food_insecurity_percentage(previous_country_data, population_data)
         print("Previous Percentage =====> ", previous_percentage) 
         
         if has_food_insecurity_increased(country, current_percentage, previous_percentage):
