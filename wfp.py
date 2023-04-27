@@ -62,19 +62,17 @@ def get_regions_from_country(country_id):
 
 def send_email(country):
     # Simulates sending an email
-    print(f"Food insecurity in {country['name']} has increased by 5% or more in the past 30 days.")
+    print(f"Food insecurity in country {country} has increased by 5% or more in the past 30 days.")
 
 def get_countries_population_from_region(csv_data):
     print("Generating population")
     global countries_dict
     global region_dict
    
-    
     for index, row in csv_data.iterrows():
         region = row['region_id']
         population = row['population']
-        if region == 341:
-    
+        if index < 300:
             response = get_country_from_region(region)
 
             print(response)
@@ -136,6 +134,7 @@ def main():
         past_percent = (insecure_population_30 / country_population) * 100.00
         print("Past percent", past_percent)
         current_percent = (insecure_population_now / country_population) * 100.00
+        print("Current percent", current_percent)
 
         if current_percent >= past_percent + 0.05:
             send_email(country)
