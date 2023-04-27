@@ -69,23 +69,23 @@ def main():
     population_df = get_population_dataframe()
     print("population_df-->",population_df)
 
-    # for country_id in RECIPIENTS.keys():
-    #     print("country_id", country_id)
-    #     regions = get_regions_from_country(country_id, token)
-    #     print("regions", regions)
+    for country_id in RECIPIENTS.keys():
+        print("country_id", country_id)
+        regions = get_regions_from_country(country_id, token)
+        print("regions", regions)
 
-    #     for region in regions:
-    #         region_id = region["id"]
-    #         population = population_df.loc[population_df["region_id"] == region_id, "population"].item()
+        for region in regions:
+            region_id = region["id"]
+            population = population_df.loc[population_df["region_id"] == region_id, "population"].item()
 
-    #         current_percent = calculate_food_insecurity_percent(region_id, 0, token)
-    #         past_percent = calculate_food_insecurity_percent(region_id, 30, token)
+            current_percent = calculate_food_insecurity_percent(region_id, 0, token)
+            past_percent = calculate_food_insecurity_percent(region_id, 30, token)
 
-    #         if current_percent >= past_percent + 0.05:
-    #             country = get_country_from_region(region_id, token)
-    #             subject = f"Food security alert for {country['name']}"
-    #             body = f"Food insecurity in {country['name']} has increased by 5% or more in the past 30 days."
-    #             send_email(country_id, subject, body)
+            if current_percent >= past_percent + 0.05:
+                country = get_country_from_region(region_id, token)
+                subject = f"Food security alert for {country['name']}"
+                body = f"Food insecurity in {country['name']} has increased by 5% or more in the past 30 days."
+                send_email(country_id, subject, body)
 
 if __name__ == "__main__":
     main()
