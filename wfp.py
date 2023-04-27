@@ -5,6 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import json
 import datetime
+import math
 
 # Configuration
 username = "hmu.user.four"
@@ -131,13 +132,15 @@ def main():
         insecure_population_30 = countries_insecure_dict.get(country, 0)
         insecure_population_now = countries_insecure_now_dict.get(country, 0)
 
-        past_percent = (insecure_population_30 / country_population) * 100.00
-        print("Past percent", past_percent)
-        current_percent = (insecure_population_now / country_population) * 100.00
-        print("Current percent", current_percent)
+        if not math.isnan(insecure_population_30) and not math.isnan(country_population):
+            past_percent = (insecure_population_30 / country_population) * 100.00
+            print("Past percent", past_percent)
+            current_percent = (insecure_population_now / country_population) * 100.00
+            print("Current percent", current_percent)
 
-        if current_percent >= past_percent + 0.05:
-            send_email(country)
+            if not math.isnan(current_percent) and not math.isnan(past_percent):
+                if current_percent >= past_percent + 0.05:
+                    send_email(country)
 
 if __name__ == "__main__":
     main()
