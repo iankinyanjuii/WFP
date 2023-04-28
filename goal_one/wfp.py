@@ -73,15 +73,15 @@ def get_countries_population_from_region(csv_data):
     for index, row in csv_data.iterrows():
         region = row['region_id']
         population = row['population']
-        if index < 300:
-            response = get_country_from_region(region)
+      
+        response = get_country_from_region(region)
 
-            print(response)
-            country = response['country_id']
-            saved_population = countries_dict.get(country, 0) 
-            countries_dict.update({country:  saved_population + population}) 
+        print(response)
+        country = response['country_id']
+        saved_population = countries_dict.get(country, 0) 
+        countries_dict.update({country:  saved_population + population}) 
 
-            region_dict.update({region: country})
+        region_dict.update({region: country})
     
     print("Country - Population ", countries_dict)
     print("Region - Country", region_dict)
@@ -134,9 +134,12 @@ def main():
 
         if not math.isnan(insecure_population_30) and not math.isnan(country_population):
             past_percent = (insecure_population_30 / country_population) * 100.00
-            print("Past percent", past_percent)
+            if not math.isnan(past_percent):
+                print("Past percent", past_percent)
+
             current_percent = (insecure_population_now / country_population) * 100.00
-            print("Current percent", current_percent)
+            if not math.isnan(current_percent):
+                print("Current percent", current_percent)
 
             if not math.isnan(current_percent) and not math.isnan(past_percent):
                 if current_percent >= past_percent + 0.05:
